@@ -1,6 +1,6 @@
 use super::{FragmentState, Root, SelectedFragments};
 use crate::prelude::FragmentId;
-use bevy_ecs::{component::Mutable, prelude::*, system::SystemId};
+use bevy_ecs::{component::Mutable, lifecycle::ComponentHook, prelude::*, system::SystemId};
 use std::{
     marker::PhantomData,
     sync::{Arc, Mutex},
@@ -68,7 +68,7 @@ pub struct IdPair {
     pub event: EventId,
 }
 
-#[derive(Debug, Event, Clone)]
+#[derive(Debug, Message, Clone)]
 pub struct FragmentEvent<Data> {
     pub id: IdPair,
     pub data: Data,
@@ -90,7 +90,7 @@ impl<Data> FragmentEvent<Data> {
     }
 }
 
-#[derive(Debug, Clone, Copy, Event)]
+#[derive(Debug, Clone, Copy, Message)]
 pub struct FragmentEndEvent {
     id: IdPair,
     interruption: bool,
@@ -102,7 +102,7 @@ pub struct StageEvent<Stage> {
     pub id: IdPair,
     pub stage: Stage,
 }
-
+/*
 impl<Stage> Event for StageEvent<Stage>
 where
     Stage: Send + Sync + 'static,
@@ -110,6 +110,8 @@ where
     const AUTO_PROPAGATE: bool = true;
     type Traversal = &'static ChildOf;
 }
+
+*/
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BeginStage {
@@ -246,14 +248,14 @@ impl<Stage: Send + 'static> Component for MapFn<Stage> {
 
     type Mutability = Mutable;
 
-    fn register_component_hooks(hooks: &mut bevy_ecs::component::ComponentHooks) {
-        hooks.on_remove(|mut world, ctx| {
+    fn on_remove() -> Option<ComponentHook> {
+        Some(|mut world, ctx| {
             let map = world.get::<MapFn<Stage>>(ctx.entity).unwrap();
             if let MapFn::System(system) = map {
                 let system = *system;
                 world.commands().unregister_system(system);
             }
-        });
+        })
     }
 }
 
@@ -264,13 +266,15 @@ fn begin_recursive(
     world: &mut World,
 ) -> Option<()> {
     let child = world.get_entity(node).ok()?;
-    let (parent_id, on_begin, on_begin_down, root, map) = child.get_components::<AnyOf<(
-        &ChildOf,
-        &OnBeginUp,
-        &OnBeginDown,
-        &Root,
-        &MapFn<BeginStage>,
-    )>>()?;
+    let (parent_id, on_begin, on_begin_down, root, map) = child
+        .get_components::<AnyOf<(
+            &ChildOf,
+            &OnBeginUp,
+            &OnBeginDown,
+            &Root,
+            &MapFn<BeginStage>,
+        )>>()
+        .ok()?;
 
     let (parent_id, on_begin, on_begin_down, root, map) = (
         parent_id.map(|p| p.parent()),
@@ -347,14 +351,16 @@ fn end_recursive(
     world: &mut World,
 ) -> Option<()> {
     let child = world.get_entity(node).ok()?;
-    let (parent_id, on_end, on_end_down, interrupt, root, map) = child.get_components::<AnyOf<(
-        &ChildOf,
-        &OnEndUp,
-        &OnEndDown,
-        &OnInterruptUp,
-        &Root,
-        &MapFn<EndStage>,
-    )>>()?;
+    let (parent_id, on_end, on_end_down, interrupt, root, map) = child
+        .get_components::<AnyOf<(
+            &ChildOf,
+            &OnEndUp,
+            &OnEndDown,
+            &OnInterruptUp,
+            &Root,
+            &MapFn<EndStage>,
+        )>>()
+        .ok()?;
 
     let (parent_id, on_end, on_end_down, interrupt, root, map) = (
         parent_id.map(|p| p.parent()),
@@ -414,7 +420,7 @@ fn end_recursive(
     Some(())
 }
 
-pub(crate) fn end_world(mut reader: EventReader<FragmentEndEvent>, mut commands: Commands) {
+pub(crate) fn end_world(mut reader: MessageReader<FragmentEndEvent>, mut commands: Commands) {
     let end_events: Vec<_> = reader.read().copied().collect();
 
     commands.queue(move |world: &mut World| {

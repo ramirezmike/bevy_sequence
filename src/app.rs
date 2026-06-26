@@ -59,7 +59,7 @@ impl Plugin for SequencePlugin {
         app.add_plugins(CombinatorPlugin)
             .insert_resource(AddedSystems(Default::default()))
             .insert_resource(fragment::SelectedFragments::default())
-            .add_event::<FragmentEndEvent>()
+            .add_message::<FragmentEndEvent>()
             .add_systems(
                 PreUpdate,
                 (

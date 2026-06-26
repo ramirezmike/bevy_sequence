@@ -1,7 +1,7 @@
 use super::Context;
 use super::event::InsertBeginDown;
 use crate::prelude::*;
-use bevy_ecs::event::EventRegistry;
+use bevy_ecs::message::MessageRegistry;
 use bevy_ecs::prelude::*;
 
 /// A leaf fragment.
@@ -28,8 +28,8 @@ where
 {
     fn into_fragment(self, _: &Context<C>, commands: &mut Commands) -> FragmentId {
         commands.queue(|world: &mut World| {
-            if !world.contains_resource::<Events<FragmentEvent<Data>>>() {
-                EventRegistry::register_event::<FragmentEvent<Data>>(world);
+            if !world.contains_resource::<Messages<FragmentEvent<Data>>>() {
+                MessageRegistry::register_message::<FragmentEvent<Data>>(world);
             }
         });
 
@@ -37,7 +37,7 @@ where
         let id = commands
             .spawn(Leaf)
             .insert_begin_down(move |event, world| {
-                world.send_event(FragmentEvent {
+                world.write_message(FragmentEvent {
                     id: event.id,
                     data: data.clone(),
                 });

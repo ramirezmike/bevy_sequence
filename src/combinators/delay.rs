@@ -45,7 +45,7 @@ pub(super) fn manage_delay(
     for (entity, mut sys) in q.iter_mut() {
         if !sys.paused {
             sys.timer.tick(time.delta());
-            if sys.timer.finished() {
+            if sys.timer.is_finished() {
                 commands.run_system(sys.id);
                 commands.entity(entity).despawn();
             }

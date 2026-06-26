@@ -86,7 +86,8 @@ fn apply_saved_state(
         Some(children) if children.len() != state.children.len() => {
             warn!(
                 "mismatch between saved state and entities for sequence \"{name}\": saved children {} does not match entities: {}",
-                state.children.len(), children.len(),
+                state.children.len(),
+                children.len(),
             );
         }
         None if !state.children.is_empty() => {
@@ -106,13 +107,13 @@ fn apply_saved_state(
 }
 
 pub(super) fn load_sequence(
-    trigger: Trigger<OnAdd, SequenceState>,
+    trigger: On<Add, SequenceState>,
     mut sequence: Query<&mut SequenceState>,
     mut nodes: Query<&mut FragmentState, With<Fragment>>,
     children: Query<&Children>,
     saved: Res<SavedSequences>,
 ) {
-    let source = trigger.target();
+    let source = trigger.event().event_target();
 
     let Ok(mut sequence) = sequence.get_mut(source) else {
         return;

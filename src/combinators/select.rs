@@ -1,8 +1,10 @@
 use crate::fragment::children::IntoChildren;
 use crate::prelude::*;
 use bevy_ecs::component::{
-    ComponentId, ComponentsRegistrator, Mutable, RequiredComponents, StorageType,
+    ComponentId, ComponentsRegistrator, Mutable, RequiredComponents, RequiredComponentsRegistrator,
+    StorageType,
 };
+use bevy_ecs::lifecycle::ComponentHook;
 use bevy_ecs::prelude::*;
 use bevy_ecs::system::{IntoSystem, SystemId};
 use std::marker::PhantomData;
@@ -41,26 +43,20 @@ impl Component for SelectSystem {
 
     type Mutability = Mutable;
 
-    fn register_component_hooks(hooks: &mut bevy_ecs::component::ComponentHooks) {
-        hooks.on_remove(|mut world, ctx| {
+    fn on_remove() -> Option<ComponentHook> {
+        Some(|mut world, ctx| {
             let eval = world.get::<SelectSystem>(ctx.entity).unwrap().0;
             world.commands().unregister_system(eval);
-        });
+        })
     }
 
     fn register_required_components(
         component_id: ComponentId,
-        components: &mut ComponentsRegistrator,
-        required_components: &mut RequiredComponents,
-        inheritance_depth: u16,
-        recursion_check_stack: &mut Vec<ComponentId>,
+        required_components: &mut RequiredComponentsRegistrator,
     ) {
         <Fragment as bevy_ecs::component::Component>::register_required_components(
             component_id,
-            components,
             required_components,
-            inheritance_depth,
-            recursion_check_stack,
         );
     }
 }

@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use bevy_ecs::component::{Mutable, StorageType};
+use bevy_ecs::lifecycle::ComponentHook;
 use bevy_ecs::prelude::*;
 use bevy_ecs::system::SystemId;
 use std::marker::PhantomData;
@@ -29,11 +30,11 @@ impl Component for EvalSystemId {
 
     type Mutability = Mutable;
 
-    fn register_component_hooks(hooks: &mut bevy_ecs::component::ComponentHooks) {
-        hooks.on_remove(|mut world, ctx| {
+    fn on_remove() -> Option<ComponentHook> {
+        Some(|mut world, ctx| {
             let eval = world.get::<EvalSystemId>(ctx.entity).unwrap().0;
             world.commands().unregister_system(eval);
-        });
+        })
     }
 }
 
@@ -95,11 +96,11 @@ impl Component for EvalSystem {
 
     type Mutability = Mutable;
 
-    fn register_component_hooks(hooks: &mut bevy_ecs::component::ComponentHooks) {
-        hooks.on_remove(|mut world, ctx| {
+    fn on_remove() -> Option<ComponentHook> {
+        Some(|mut world, ctx| {
             let eval = world.get::<EvalSystemId>(ctx.entity).unwrap().0;
             world.commands().unregister_system(eval);
-        });
+        })
     }
 }
 
